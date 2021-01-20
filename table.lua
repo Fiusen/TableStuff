@@ -90,8 +90,6 @@ function getPath(Instance)
 end
 
 local LoadedTables = {}
-
-local IDX = {}
  
 local function analise(t) -- Type analiser for table.stringify
 
@@ -114,7 +112,6 @@ local function analise(t) -- Type analiser for table.stringify
 
   if Type == "table" then
     LoadedTables[t] = true
-    IDX[#IDX+1] = functions.stringify(t, true)
     return
   end
   
