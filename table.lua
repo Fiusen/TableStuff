@@ -112,6 +112,7 @@ local function analise(t) -- Type analiser for table.stringify
 
   if Type == "table" then
     LoadedTables[t] = true
+    functions.stringify(t, true)
     return
   end
   
