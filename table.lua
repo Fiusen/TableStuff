@@ -55,13 +55,13 @@ end
 
 local ValidClasses = {}
 
-if game then
+if game then -- roblox stuff
   for i,v in pairs(game:GetChildren()) do
     ValidClasses[v.ClassName] = true
   end
 end
 
-function getPath(Instance) 
+function getPath(Instance) -- roblox stuff
     -- Better implementation of :GetFullName
     -- We are not going to change from default concat here because a game would need to have like 10k parents on a object for it to lag
     if not Instance or typeof(Instance) ~= "Instance" then return "nil instance" end
@@ -125,7 +125,7 @@ local function analise(t) -- Type analiser for table.stringify
   end
   
   if Type == "function" then
-        return Push("'"..tostring(t).."' --[[Actual function, tostringed to avoid errors]]")
+        return Push('"'..tostring(t)..'" --[[Actual function, tostringed to avoid errors]]')
   end
   
   if Type == "boolean" then
@@ -136,6 +136,7 @@ local function analise(t) -- Type analiser for table.stringify
 end
 
 function FixUserdata(u) -- Skidded from simplespy source, credits to him (made performance fixes btw) (roblox stuff)
+    -- (https://github.com/exxtremestuffs/SimpleSpySource/blob/master/SimpleSpy.lua)
     if typeof(u) == "TweenInfo" then
         -- TweenInfo
         return "TweenInfo.new(" ..tostring(u.Time) .. ", Enum.EasingStyle." .. tostring(u.EasingStyle) .. ", Enum.EasingDirection." .. tostring(u.EasingDirection) .. ", " .. tostring(u.RepeatCount) .. ", " .. tostring(u.Reverses) .. ", " .. tostring(u.DelayTime) .. ")"
