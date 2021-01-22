@@ -119,12 +119,13 @@ local function analise(t) -- Type analiser for table.stringify
   if Type == "userdata" then
         return Push(FixUserdata(t))
   end
-  if typeof(v) == "userdata" then -- only in luau
+
+  if typeof(v) == "userdata" then -- only for luau
       Push("newproxy(true)") 
   end
   
   if Type == "function" then
-        return Push("'"..tostring(t).."'")
+        return Push("'"..tostring(t).."' --[[Actual function, tostringed to avoid errors]]")
   end
   
   if Type == "boolean" then
@@ -216,7 +217,7 @@ function FixUserdata(u) -- Skidded from simplespy source, credits to him (made p
     elseif typeof(u) == "PathWaypoint" then
         return (string.format("PathWaypoint.new(%s, %s)", tostring(u.Position), tostring(u.Action)))
     else
-        return '"'..tostring(u)..'"'
+        return '"'..tostring(u)..'" --[[Actual userdata, tostringed to avoid errors]]'
     end
 end
 
@@ -243,6 +244,10 @@ function Bring(...) -- Sets the old __tostring metatable to the object
 end
 
 function GetMeaning(t) -- Gets table size till next hole
+  -- Lua isnt good enough so even if you parse the stringified table
+  -- and outputed its size it would throw different results (from non-str to stringified)
+  -- bc tables with holes are undefined behavior and an actual lua bug
+  -- this will work fine if the index number (w/ hole) is defined inside the table and not outside it
   local index = 0
   for i, v in pairs(t) do
     if typeof(i) == "number" and i-1 == index then
