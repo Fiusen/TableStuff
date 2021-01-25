@@ -247,7 +247,7 @@ end
 function GetMeaning(t) -- Gets table size till next hole
   -- Lua isnt good enough so even if you parse the stringified table
   -- and outputed its size it would throw different results (from non-str to stringified)
-  -- bc tables with holes are undefined behavior and an actual lua bug
+  -- bc tables with holes are undefined behavior
   -- this will work fine if the index number (w/ hole) is defined inside the table and not outside it
   local index = 0
   for i, v in pairs(t) do
