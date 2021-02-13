@@ -309,4 +309,27 @@ functions.parse = function(t)
   return loadstring("return "..t)()
 end
 
+local Indexed;
+
+local function GrabIndex(t, idx)
+  for i, v in pairs(t) do
+      if i == idx then
+          return i
+      end
+      if typeof(v) == "table" and not LoadedTables[v] then
+        LoadedTables[v] = true
+        Indexed[#Indexed+1] = i
+        GrabIndex(v, idx)
+        return Indexed
+      end
+  end
+end
+
+functions.rfind = function(t, idx) 
+    -- Recursive finding on a table, returns a table if there are multiple indexes
+    LoadedTables = {}
+    Indexed = {}
+    return GrabIndex(t, idx)
+end
+
 return functions
