@@ -2,19 +2,36 @@ local functions = {}
 
 local Results = {}
 
-function getcallingscript() return false end -- Disabled because of detection
-getrawmetatable = getrawmetatable or getmetatable
-setreadonly = setreadonly or function() end
-typeof = typeof or type
+local getrawmetatable = getrawmetatable or getmetatable
+local setreadonly = setreadonly or function() end
+local typeof = typeof or type
+local tableconcat = table.concat
+local stringf = string.format
+local pairs = pairs
+local gsub = string.gsub
+local tostring = tostring
+local type = type
+local rawget = rawget
+local rawset = rawset
+local stringchar = string.char
+
+local tostr = function(str) -- safe tostring
+    local mt = getrawmetatable(str)
+    if mt then 
+        setreadonly(mt, false)
+        local Copy = rawget(mt, "__tostring")
+        rawset(mt, "__tostring", nil)
+        local r = tostring(str)
+        rawset(mt, "__tostring", Copy)
+        setreadonly(mt, true)
+        return r
+    else
+        return tostring(str)
+    end
+end
 
 local function Push(str) -- Push string to table (10000000x faster than normal concat)
   Results[#Results+1] = str
-end
-
-local ResultsQuick = {}
-
-local function PushOnScope(str) -- Push string to table but on a diff table 
-  ResultsQuick[#ResultsQuick+1] = str
 end
 
 local EscapedChars = { -- List of common escaped chars
@@ -29,12 +46,13 @@ local EscapedChars = { -- List of common escaped chars
     ["'"] = "\\'",
 }
 
-local ControlCharEscapes = {} -- \a => nil, \0 => \000, 31 => \031 -- from inspect.lua
+local ControlCharEscapes = {} -- \a => nil, \0 => \000, 31 => \031 
+-- from https://github.com/kikito/inspect.lua
 for i=0, 31 do
-  local ch = string.char(i)
+  local ch = stringchar(i)
   if not EscapedChars[ch] then
     EscapedChars[ch] = "\\"..i
-    ControlCharEscapes[ch]  = string.format("\\%03d", i)
+    ControlCharEscapes[ch]  = stringf("\\%03d", i)
   end
 end
 
@@ -45,10 +63,7 @@ local function FixStrings(str) -- String fixer
         return "String was too big ("..#str.." chars)"
     end
 
-    return (str:gsub("\\", "\\\\")
-             :gsub("(%c)%f[0-9]", ControlCharEscapes)
-             :gsub("%c", EscapedChars)
-             :gsub("\"", "\\\""))
+    return gsub(gsub(gsub(gsub(str, "\\", "\\\\"), "(%c)%f[0-9]", ControlCharEscapes), "%c", EscapedChars), "\"", "\\\"")
 end
 
 
@@ -61,7 +76,7 @@ if game then -- roblox stuff
   end
 end
 
-function getPath(Instance) -- roblox stuff
+local function getPath(Instance) -- roblox stuff
     -- Better implementation of :GetFullName
     -- We are not going to change from default concat here because a game would need to have like 10k parents on a object for it to lag
     if not Instance or typeof(Instance) ~= "Instance" then return "nil instance" end
@@ -94,42 +109,31 @@ local LoadedTables = {}
 local function analise(t) -- Type analiser for table.stringify
 
   if LoadedTables[t] then Push("{} --[[Already defined table]]") return end
+  
   local Type = type(t)
 
   if typeof(t) == "Instance" then
       return Push(getPath(t))
-  end
-
-  if Type == "string" then
+  elseif Type == "string" then
     Push('"')
     Push(FixStrings(t))
     return Push('"')
-  end
-
-  if Type == "number" then
+  elseif Type == "number" then
      return Push(t)
-  end
-
-  if Type == "table" then
+  elseif Type == "table" then
     LoadedTables[t] = true
     functions.stringify(t, true)
     return
-  end
-  
-  if Type == "userdata" then
+  elseif Type == "userdata" then
         return Push(FixUserdata(t))
-  end
-
-  if typeof(v) == "userdata" then -- only for luau
+  elseif typeof(v) == "userdata" then -- only for luau
       Push("newproxy(true)") 
-  end
-  
-  if Type == "function" then
-        return Push('"'..tostring(t)..'" --[[Actual function, tostringed to avoid errors]]')
-  end
-  
-  if Type == "boolean" then
-        return Push(tostring(t))
+  elseif Type == "function" then
+        return Push('"'..tostr(t)..'" --[[Actual function, tostringed to avoid errors]]')
+  elseif Type == "boolean" then
+        return Push(tostr(t))
+  elseif Type == "nil" then
+        return Push("nil")
   end
 
   error(Type.." not detected")
@@ -139,7 +143,7 @@ function FixUserdata(u) -- Skidded from simplespy source, credits to him (made p
     -- (https://github.com/exxtremestuffs/SimpleSpySource/blob/master/SimpleSpy.lua)
     if typeof(u) == "TweenInfo" then
         -- TweenInfo
-        return "TweenInfo.new(" ..tostring(u.Time) .. ", Enum.EasingStyle." .. tostring(u.EasingStyle) .. ", Enum.EasingDirection." .. tostring(u.EasingDirection) .. ", " .. tostring(u.RepeatCount) .. ", " .. tostring(u.Reverses) .. ", " .. tostring(u.DelayTime) .. ")"
+        return "TweenInfo.new(" ..tostr(u.Time) .. ", Enum.EasingStyle." .. tostr(u.EasingStyle) .. ", Enum.EasingDirection." .. tostr(u.EasingDirection) .. ", " .. tostr(u.RepeatCount) .. ", " .. tostr(u.Reverses) .. ", " .. tostr(u.DelayTime) .. ")"
     elseif typeof(u) == "Ray" then
         -- Ray
         return ("Ray.new(" .. FixUserdata(u.Origin) .. ", " .. FixUserdata(u.Direction) .. ")")
@@ -147,7 +151,7 @@ function FixUserdata(u) -- Skidded from simplespy source, credits to him (made p
         -- NumberSequence
         local ret = "NumberSequence.new("
         for i, v in pairs(u.KeyPoints) do
-            ret = ret .. tostring(v)
+            ret = ret .. tostr(v)
             if i < #u.Keypoints then
                 ret = ret .. ", "
             end
@@ -155,12 +159,12 @@ function FixUserdata(u) -- Skidded from simplespy source, credits to him (made p
         return (ret .. ")")
     elseif typeof(u) == "DockWidgetPluginGuiInfo" then
         -- DockWidgetPluginGuiInfo
-        return ("DockWidgetPluginGuiInfo.new(Enum.InitialDockState" .. tostring(u) .. ")")
+        return ("DockWidgetPluginGuiInfo.new(Enum.InitialDockState" .. tostr(u) .. ")")
     elseif typeof(u) == "ColorSequence" then
         -- ColorSequence
         local ret = "ColorSequence.new("
         for i, v in pairs(u.KeyPoints) do
-            ret = ret .. "Color3.new(" .. tostring(v) .. ")"
+            ret = ret .. "Color3.new(" .. tostr(v) .. ")"
             if i < #u.Keypoints then
                 ret = ret .. ", "
             end
@@ -168,10 +172,10 @@ function FixUserdata(u) -- Skidded from simplespy source, credits to him (made p
         return (ret .. ")")
     elseif typeof(u) == "BrickColor" then
         -- BrickColor
-        return ("BrickColor.new(" .. tostring(u.Number) .. ")")
+        return ("BrickColor.new(" .. tostr(u.Number) .. ")")
     elseif typeof(u) == "NumberRange" then
         -- NumberRange
-        return ("NumberRange.new(" .. tostring(u.Min) .. ", " .. tostring(u.Max) .. ")")
+        return ("NumberRange.new(" .. tostr(u.Min) .. ", " .. tostr(u.Max) .. ")")
     elseif typeof(u) == "Region3" then
         -- Region3
         local center = u.CFrame.Position
@@ -196,61 +200,40 @@ function FixUserdata(u) -- Skidded from simplespy source, credits to him (made p
                  Res[#Res+1] = "Enum.NormalId."..v
             end
         end
-        return "Faces.new("..table.concat(Res, ", ")..")" 
+        return "Faces.new("..tableconcat(Res, ", ")..")" 
     elseif typeof(u) == "EnumItem" then
-        return (tostring(u))
+        return (tostr(u))
     elseif typeof(u) == "Enums" then
         return ("Enum")
     elseif typeof(u) == "Enum" then
-        return ("Enum." .. tostring(u))
+        return ("Enum." .. tostr(u))
     elseif typeof(u) == "RBXScriptSignal" then
         return ("nil --[[RBXScriptSignal]]")
     elseif typeof(u) == "Vector3" then
-        return (string.format("Vector3.new(%s, %s, %s)", tostring(u.X), tostring(u.Y), tostring(u.Z)))
+        return (stringf("Vector3.new(%s, %s, %s)", tostr(u.X), tostr(u.Y), tostr(u.Z)))
     elseif typeof(u) == "CFrame" then
-        return (string.format("CFrame.new(%s, %s)", tostring(u.Position), tostring(u.LookVector)))
+        return (stringf("CFrame.new(%s, %s)", tostr(u.Position), tostr(u.LookVector)))
     elseif typeof(u) == "DockWidgetPluginGuiInfo" then
-        return (string.format("DockWidgetPluginGuiInfo(%s, %s, %s, %s, %s, %s, %s)", "Enum.InitialDockState.Right", tostring(u.InitialEnabled), tostring(u.InitialEnabledShouldOverrideRestore), tostring(u.FloatingXSize), tostring(u.FloatingYSize), tostring(u.MinWidth), tostring(u.MinHeight)))
+        return (stringf("DockWidgetPluginGuiInfo(%s, %s, %s, %s, %s, %s, %s)", "Enum.InitialDockState.Right", tostr(u.InitialEnabled), tostr(u.InitialEnabledShouldOverrideRestore), tostr(u.FloatingXSize), tostr(u.FloatingYSize), tostr(u.MinWidth), tostr(u.MinHeight)))
     elseif typeof(u) == "RBXScriptConnection" then
-        return ("nil --[[RBXScriptConnection " .. tostring(u) .. "]]")
+        return ("nil --[[RBXScriptConnection " .. tostr(u) .. "]]")
     elseif typeof(u) == "RaycastResult" then
-        return ("nil --[[RaycastResult " .. tostring(u) .. "]]")
+        return ("nil --[[RaycastResult " .. tostr(u) .. "]]")
     elseif typeof(u) == "PathWaypoint" then
-        return (string.format("PathWaypoint.new(%s, %s)", tostring(u.Position), tostring(u.Action)))
+        return (stringf("PathWaypoint.new(%s, %s)", tostr(u.Position), tostr(u.Action)))
     else
-        return '"'..tostring(u)..'" --[[Actual userdata, tostringed to avoid errors]]'
+        return '"'..tostr(u)..'" --[[Actual userdata, tostringed to avoid errors]]'
     end
 end
 
-local METAT = {}
 
-function Get(...) -- Removes __tostring metatable and saves it to a table
-  for i, v in pairs({...}) do
-          local MT = getrawmetatable(v)
-          if MT then 
-            setreadonly(MT, false)
-            METAT[v] = getrawmetatable(v).__tostring
-            getrawmetatable(v).__tostring = nil
-      end
-  end
-end
-
-function Bring(...) -- Sets the old __tostring metatable to the object
-  for i, v in pairs({...}) do
-      local MT = METAT[v]
-      if MT then
-          getrawmetatable(v).__tostring = MT
-      end
-  end
-end
-
-function GetMeaning(t) -- Gets table size till next hole
+local function GetMeaning(t) -- Gets table size till next hole
   -- Lua isnt good enough so even if you parse the stringified table
   -- and outputed its size it would throw different results (from non-str to stringified)
   -- bc tables with holes are undefined behavior
   -- this will work fine if the index number (w/ hole) is defined inside the table and not outside it
   local index = 0
-  for i, v in pairs(t) do
+  for i, v in pairs(t) do -- I need pairs here
     if typeof(i) == "number" and i-1 == index then
       index = index + 1
     else
@@ -271,10 +254,7 @@ functions.stringify = function(t, bool) -- stringifies the given table
   local TableList = GetMeaning(t)
 
   Push("{")
-  for i, v in pairs(t) do
-
-    Get(i, v) -- Removes metatables
-    
+  for i, v in pairs(t) do  
     if typeof(i) == "number" and i <= TableList then
       -- This is so it wont format tables like:
       -- [1] = ""
@@ -283,7 +263,6 @@ functions.stringify = function(t, bool) -- stringifies the given table
       Push("\n")
       analise(v)
       -- formats to: v;
-
     else
       Push("\n[")
       analise(i)
@@ -291,17 +270,11 @@ functions.stringify = function(t, bool) -- stringifies the given table
       analise(v)
       -- formats to: [i] = v;
     end
-
-    Push(";")
-    
-    Bring(i, v) -- Pushes metatables back to the object
-
-    
-
+    Push(";") 
   end
   Push("\n}")
 
-  return table.concat(Results)
+  return tableconcat(Results)
 end
 
 functions.parse = function(t)
@@ -312,7 +285,8 @@ end
 local Indexed;
 
 local function GrabIndex(t, idx)
-  for i, v in pairs(t) do
+  for i = 1, #t do
+      local v = t[i]
       if i == idx then
           return i
       end
