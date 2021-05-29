@@ -84,11 +84,12 @@ local function getPath(Instance) -- roblox stuff
         return "game" 
     end
     if Instance.Parent == nil then
-        return 'getnilinstance("'..FixStrings(Instance.Name)..'")' --[[Instance is on nil]]
+        return 'getnilinstance("'..FixStrings(Instance.Name)..'")' --Instance is on nil
     end
     local obj = Instance
     local Path = ""
-    repeat obj = obj.Parent 
+    repeat 
+        obj = obj.Parent 
         if obj then
             if not ValidClasses[obj.ClassName] then
                 if obj ~= game and obj then
@@ -115,15 +116,12 @@ local function analise(t) -- Type analiser for table.stringify
   if typeof(t) == "Instance" then
       return Push(getPath(t))
   elseif Type == "string" then
-    Push('"')
-    Push(FixStrings(t))
-    return Push('"')
+    return Push('"'..FixStrings(t)..'"')
   elseif Type == "number" then
      return Push(t)
   elseif Type == "table" then
     LoadedTables[t] = true
-    functions.stringify(t, true)
-    return
+    return functions.stringify(t, true)
   elseif Type == "userdata" then
         return Push(FixUserdata(t))
   elseif typeof(v) == "userdata" then -- only for luau
