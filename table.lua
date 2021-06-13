@@ -84,7 +84,7 @@ local function getPath(Instance) -- roblox stuff
         return "game" 
     end
     if Instance.Parent == nil then
-        return 'getnilinstance("'..FixStrings(Instance.Name)..'")' --Instance is on nil
+        return "getnilinstance('"..FixStrings(Instance.Name).."')" --Instance is on nil
     end
     local obj = Instance
     local Path = ""
