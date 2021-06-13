@@ -1,5 +1,7 @@
 local functions = {}
+
 local Results = {}
+
 local getrawmetatable = getrawmetatable or getmetatable
 local setreadonly = setreadonly or function() end
 local typeof = typeof or type
@@ -12,6 +14,7 @@ local type = type
 local rawget = rawget
 local rawset = rawset
 local stringchar = string.char
+
 local tostr = function(str) -- safe tostring
     local mt = getrawmetatable(str)
     if mt then 
@@ -26,9 +29,11 @@ local tostr = function(str) -- safe tostring
         return tostring(str)
     end
 end
+
 local function Push(str) -- Push string to table (10000000x faster than normal concat)
   Results[#Results+1] = str
 end
+
 local EscapedChars = { -- List of common escaped chars
     ['\n'] = '\\n',
     ['\a'] = '\\a',
@@ -40,6 +45,7 @@ local EscapedChars = { -- List of common escaped chars
     ["/"] = '/',
     ["'"] = "\\'",
 }
+
 local ControlCharEscapes = {} -- \a => nil, \0 => \000, 31 => \031 
 -- from https://github.com/kikito/inspect.lua
 for i=0, 31 do
@@ -49,22 +55,27 @@ for i=0, 31 do
     ControlCharEscapes[ch]  = stringf("\\%03d", i)
   end
 end
+
+
 local function FixStrings(str) -- String fixer
+
     if #str > 10000 then
         return "String was too big ("..#str.." chars)"
     end
 
-    return gsub(gsub(gsub(str, "\\", "\\\\"), "(%c)%f[0-9]", ControlCharEscapes), "%c", EscapedChars)
     return gsub(gsub(gsub(gsub(str, "\\", "\\\\"), "(%c)%f[0-9]", ControlCharEscapes), "%c", EscapedChars), "\"", "\\\"")
 end
 
 
+
 local ValidClasses = {}
+
 if game then -- roblox stuff
   for i,v in pairs(game:GetChildren()) do
     ValidClasses[v.ClassName] = true
   end
 end
+
 local function getPath(Instance) -- roblox stuff
     -- Better implementation of :GetFullName
     -- We are not going to change from default concat here because a game would need to have like 10k parents on a object for it to lag
@@ -93,12 +104,15 @@ local function getPath(Instance) -- roblox stuff
     until not obj or obj.Parent == game
     return FixStrings(Path..'["'..Instance.Name..'"]') -- Path could have weird symbols
 end
+
 local LoadedTables = {}
  
 local function analise(t) -- Type analiser for table.stringify
+
   if LoadedTables[t] then Push("{} --[[Already defined table]]") return end
   
   local Type = type(t)
+
   if typeof(t) == "Instance" then
       return Push(getPath(t))
   elseif Type == "string" then
@@ -119,8 +133,10 @@ local function analise(t) -- Type analiser for table.stringify
   elseif Type == "nil" then
         return Push("nil")
   end
+
   error(Type.." not detected")
 end
+
 function FixUserdata(u) -- Skidded from simplespy source, credits to him (made performance fixes btw) (roblox stuff)
     -- (https://github.com/exxtremestuffs/SimpleSpySource/blob/master/SimpleSpy.lua)
     if typeof(u) == "TweenInfo" then
@@ -207,6 +223,8 @@ function FixUserdata(u) -- Skidded from simplespy source, credits to him (made p
         return '"'..tostr(u)..'" --[[Actual userdata, tostringed to avoid errors]]'
     end
 end
+
+
 local function GetMeaning(t) -- Gets table size till next hole
   -- Lua isnt good enough so even if you parse the stringified table
   -- and outputed its size it would throw different results (from non-str to stringified)
@@ -222,13 +240,17 @@ local function GetMeaning(t) -- Gets table size till next hole
   end
   return index
 end
+
 functions.stringify = function(t, bool) -- stringifies the given table
   assert(type(t) == "table", "argument must be a table")
+
   if not bool then
     Results = {}
     LoadedTables = {}
   end
+
   local TableList = GetMeaning(t)
+
   Push("{")
   for i, v in pairs(t) do  
     if typeof(i) == "number" and i <= TableList then
@@ -249,13 +271,17 @@ functions.stringify = function(t, bool) -- stringifies the given table
     Push(";") 
   end
   Push("\n}")
+
   return tableconcat(Results)
 end
+
 functions.parse = function(t)
   assert(type(t) == "string", "argument must be a string")
   return loadstring("return "..t)()
 end
+
 local Indexed;
+
 local function GrabIndex(t, idx)
   for i = 1, #t do
       local v = t[i]
@@ -270,10 +296,12 @@ local function GrabIndex(t, idx)
       end
   end
 end
+
 functions.rfind = function(t, idx) 
     -- Recursive finding on a table, returns a table if there are multiple indexes
     LoadedTables = {}
     Indexed = {}
     return GrabIndex(t, idx)
 end
+
 return functions
