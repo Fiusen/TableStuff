@@ -96,13 +96,13 @@ local function getPath(Instance) -- roblox stuff
                     Path = '["'..obj.Name..'"]'..Path 
                 end
                 elseif obj then
-                    Path = 'game:GetService("'..obj.ClassName..'")'..Path                
+                    Path = "game:GetService('"..obj.ClassName.."')"..Path                
                 end
         else
             Path = "game"..Path
         end
     until not obj or obj.Parent == game
-    return FixStrings(Path..'["'..Instance.Name..'"]') -- Path could have weird symbols
+    return FixStrings(Path.."['"..Instance.Name.."']") -- Path could have weird symbols
 end
 
 local LoadedTables = {}
