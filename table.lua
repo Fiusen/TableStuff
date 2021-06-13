@@ -63,7 +63,7 @@ local function FixStrings(str) -- String fixer
         return "String was too big ("..#str.." chars)"
     end
 
-    return gsub(gsub(gsub(str, "\\", "\\\\"), "(%c)%f[0-9]", ControlCharEscapes), "%c", EscapedChars)
+    return gsub(gsub(gsub(gsub(str, "\\", "\\\\"), "(%c)%f[0-9]", ControlCharEscapes), "%c", EscapedChars), "\"", "\\\"")
 end
 
 
