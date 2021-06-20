@@ -122,7 +122,7 @@ local function analise(t) -- Type analiser for table.stringify
   elseif Type == "table" then
     LoadedTables[t] = true
     return functions.stringify(t, true)
-  elseif Type == "userdata" then
+  elseif Type == "userdata" or Type == "vector" then
         return Push(FixUserdata(t))
   elseif typeof(v) == "userdata" then -- only for luau
       Push("newproxy(true)") 
@@ -207,7 +207,7 @@ function FixUserdata(u) -- Skidded from simplespy source, credits to him (made p
         return ("Enum." .. tostr(u))
     elseif typeof(u) == "RBXScriptSignal" then
         return ("nil --[[RBXScriptSignal]]")
-    elseif typeof(u) == "Vector3" then
+    elseif typeof(u) == "vector" then
         return (stringf("Vector3.new(%s, %s, %s)", tostr(u.X), tostr(u.Y), tostr(u.Z)))
     elseif typeof(u) == "CFrame" then
         return (stringf("CFrame.new(%s, %s)", tostr(u.Position), tostr(u.LookVector)))
