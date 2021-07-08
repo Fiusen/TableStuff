@@ -107,38 +107,9 @@ end
 
 
 local LoadedTables = {}
- 
-local function analise(t) -- Type analiser for table.stringify
 
-  if LoadedTables[t] then Push("{} --[[Already defined table]]") return end
-  
-  local Type = type(t)
 
-  if typeof(t) == "Instance" then
-      return Push(getPath(t))
-  elseif Type == "string" then
-    return Push('"'..FixStrings(t)..'"')
-  elseif Type == "number" then
-     return Push(t)
-  elseif Type == "table" then
-    LoadedTables[t] = true
-    return functions.stringify(t, true)
-  elseif Type == "userdata" or Type == "vector" then
-        return Push(FixUserdata(t))
-  elseif typeof(v) == "userdata" then -- only for luau
-      Push("newproxy(true)") 
-  elseif Type == "function" then
-        return Push('"'..tostr(t)..'" --[[Actual function, tostringed to avoid errors]]')
-  elseif Type == "boolean" then
-        return Push(tostr(t))
-  elseif Type == "nil" then
-        return Push("nil")
-  end
-
-  error(Type.." not detected")
-end
-
-function FixUserdata(u) -- Skidded from simplespy source, credits to him (made performance fixes btw) (roblox stuff)
+local function FixUserdata(u) -- Skidded from simplespy source, credits to him (made performance fixes btw) (roblox stuff)
     -- (https://github.com/exxtremestuffs/SimpleSpySource/blob/master/SimpleSpy.lua)
     if typeof(u) == "TweenInfo" then
         -- TweenInfo
@@ -224,6 +195,37 @@ function FixUserdata(u) -- Skidded from simplespy source, credits to him (made p
         return '"'..tostr(u)..'" --[[Actual userdata, tostringed to avoid errors]]'
     end
 end
+ 
+local function analise(t) -- Type analiser for table.stringify
+
+  if LoadedTables[t] then Push("{} --[[Already defined table]]") return end
+  
+  local Type = type(t)
+
+  if typeof(t) == "Instance" then
+      return Push(getPath(t))
+  elseif Type == "string" then
+    return Push('"'..FixStrings(t)..'"')
+  elseif Type == "number" then
+     return Push(t)
+  elseif Type == "table" then
+    LoadedTables[t] = true
+    return functions.stringify(t, true)
+  elseif Type == "userdata" or Type == "vector" then
+        return Push(FixUserdata(t))
+  elseif typeof(v) == "userdata" then -- only for luau
+      Push("newproxy(true)") 
+  elseif Type == "function" then
+        return Push('"'..tostr(t)..'" --[[Actual function, tostringed to avoid errors]]')
+  elseif Type == "boolean" then
+        return Push(tostr(t))
+  elseif Type == "nil" then
+        return Push("nil")
+  end
+
+  error(Type.." not detected")
+end
+
 
 
 local function GetMeaning(t) -- Gets table size till next hole
