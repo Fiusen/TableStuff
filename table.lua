@@ -172,7 +172,7 @@ local function FixUserdata(u) -- Skidded from simplespy source, credits to him (
         end
         return "Faces.new("..tableconcat(Res, ", ")..")" 
     elseif typeof(u) == "EnumItem" then
-        return (tostr(u))
+        return (tostring(u)) -- not cool
     elseif typeof(u) == "Enums" then
         return ("Enum")
     elseif typeof(u) == "Enum" then
