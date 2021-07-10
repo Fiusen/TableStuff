@@ -86,24 +86,24 @@ local function getPath(Instance) -- roblox stuff
     if Instance.Parent == nil then
         return 'getnilinstance("'..FixStrings(Instance.Name)..'")' --Instance is on nil
     end
-    local obj = Instance
     local Path = ""
-    repeat 
-        obj = obj.Parent 
-        if obj then
-            if not ValidClasses[obj.ClassName] then
-                if obj ~= game and obj then
-                    Path = "['"..obj.Name.."']"..Path 
-                end
-                elseif obj then
-                    Path = "game:GetService('"..obj.ClassName.."')"..Path                
-                end
+    repeat
+        if ValidClasses[Instance.Name] then -- GetService
+           Path = ":GetService('"..Instance.Name.."')"..Path
         else
-            Path = "game"..Path
+            local Name = Instance.Name
+            if Name:match("^[^%a]") or Name:match("%p") then
+                Path = "['"..Name.."']"..Path
+            else
+                Path = "."..Name..Path
+            end
         end
-    until not obj or obj.Parent == game
-    return FixStrings(Path.."['"..Instance.Name.."']") -- Path could have weird symbols
+        Instance = Instance.Parent
+    until Instance == game
+    Path = "game"..Path
+    return (FixStrings(Path)) -- Path could have weird symbols
 end
+
 
 
 local LoadedTables = {}
