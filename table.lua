@@ -92,7 +92,7 @@ local function getPath(Instance) -- roblox stuff
            Path = ":GetService('"..Instance.Name.."')"..Path
         else
             local Name = Instance.Name
-            if Name:match("^[^%a]") or Name:match("%p") or Name:match("%s") or Name:match("z") then
+            if Name:match("^[^%a]") or Name:match("%p") or Name:match("%s") or Name:match("%c") then
                 Path = "['"..Name.."']"..Path
             else
                 Path = "."..Name..Path
